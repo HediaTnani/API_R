@@ -1,0 +1,330 @@
+---
+title: "Getting started with API in R"
+author: "Hedia Tnani"
+format: docx
+theme: zephyr 
+editor: visual
+---
+
+# Getting started with API in R
+
+## Why should I learn about APIs?
+
+For the past 2 years, many groups have been working on creating APIs that the entire research community can leverage. There's a a publication [A Review on Genomics APIs](https://www.sciencedirect.com/science/article/pii/S2001037015000471#f0015) which shows some of the APIs used to retrieve data such as Google Genomics API and 23andMe API.
+
+## What is an API?
+
+**API** stands for **Application Programming Interface.**
+
+An API acts as interface between two applications (Client and sever).
+
+## How?
+
+Let's take a non technical example to make it to understand.
+
+![](images/API1.jpeg)
+
+[Source](https://dev.to/hackthisfall/what-is-api-explained-in-easy-way-5aih)
+
+In terms of API, we can say that we as **Customer(application)** will send a **request**, the **waiter(API)** will take our request and send it to the **chef(server).** The **chef(server)** takes action according to our request and send it back to the waiter(API). This is how actually things work in the *backend*.
+
+An example from the 23andMe API.
+
+![](images/23andme.png)
+
+[Source](https://www.sciencedirect.com/science/article/pii/S2001037015000471#s0020)
+
+## Making API requests in R
+
+To work with APIs in R, we need to bring in two libraries `httr` and `jsonlite`. 
+
+### 1. Preparing the URL
+
+### **What is an URL?**
+
+The **Uniform Resource Locator or URL** is a string (of characters) that uniquely identifies a web resource. For example, "https://rest.ensembl.org" is the URL that identifies Ensembl's homepage. The URL is the input of any API request. It consists of two parts: - The fixed part: base URL --- the base URL is the main address of the API web server - The variable part: endpoint --- an endpoint is a server route for retrieving specific data from an API.
+
+### **What is an API endpoint?**
+
+API endpoints are the specific digital location where requests for information are sent by one program to retrieve the digital resource that exists there. **Endpoints specify where APIs can access resources and help guarantee the proper functioning of the incorporated software**. An API's performance depends on its capacity to successfully communicate with API endpoints.
+
+Example:
+
+[Ensembl REST API Endpoints](https://rest.ensembl.org)
+
+Let's load the `library(httr)`. The `modify_url()` allows us to combine base URLs and endpoints.
+
+```{r}
+library(httr)
+# Preparing the URL 
+baseurl <- "https://rest.ensembl.org"
+ext <- "/sequence/id/ENSG00000157764"
+url <- modify_url(baseurl, path = ext)
+url
+```
+
+### 2. Querying the database
+
+APIs use **HTTP verbs** for data requests. One of the most common is a **GET** request. The GET request asks the API to ***retrieve*** a resource, such as a database record or the contents of a file, and send it to the client. To make a GET request we´ll be using the **`GET()` function** from the `httr` package.
+
+```{r}
+response = GET(url)
+response
+```
+
+The API response contains, among other information, the query URL and date, the response status, and the content type and size. It might also include the content itself, but this part isn't visible here.
+
+The Content-Type of the API response is an `application/json`.
+
+JSON stands for **JavaScript Object Notation.**
+
+### 3. Tracking Errors
+
+When making queries, it's entirely possible that the output isn't the right type or that something will go wrong . Therefore, it's important to track these errors. Web servers return status codes every time they receive an API request. A status code reports what happened with a request.
+
+Let´s check the status code of our request:
+
+```{r}
+http_status(response)
+```
+
+The Status-Code element in a server response, is a 3-digit integer where the first digit of the Status-Code defines the class of response and the last two digits do not have any categorization role. There are 5 values for the first digit:
+
++-------------+--------------------------------------------------------------------------+
+| S.N.        | Code and Description                                                     |
++=============+==========================================================================+
+| 1           | **1xx: Informational**                                                   |
+|             |                                                                          |
+|             | It means the request has been received and the process is continuing.    |
++-------------+--------------------------------------------------------------------------+
+| 2           | **2xx: Success**                                                         |
+|             |                                                                          |
+|             | It means the action was successfully received, understood, and accepted. |
++-------------+--------------------------------------------------------------------------+
+| 3           | **3xx: Redirection**                                                     |
+|             |                                                                          |
+|             | It means further action must be taken in order to complete the request.  |
++-------------+--------------------------------------------------------------------------+
+| 4           | **4xx: Client Error**                                                    |
+|             |                                                                          |
+|             | It means the request contains incorrect syntax or cannot be fulfilled.   |
++-------------+--------------------------------------------------------------------------+
+| 5           | **5xx: Server Error**                                                    |
+|             |                                                                          |
+|             | It means the server failed to fulfill an apparently valid request.       |
++-------------+--------------------------------------------------------------------------+
+
+The `httr` package provides us with several functions to track these errors.
+
+-   The **`http_error(response)`** checks if something went wrong and returns a logical value.
+
+```{r}
+http_error(response)
+```
+
+-   The **`status_code(response)`** returns the status code.
+
+```{r}
+status_code(response)
+```
+
+-   The **`http_type(response)`** returns the format of the content, so we can see if it is what we expected.
+
+```{r}
+http_type(response)
+```
+
+When something goes wrong and `http_error(response)` returns `TRUE`, we stop the function execution using the `stop()` function.
+
+```{r}
+if(http_error(response)){
+      status_code(404)
+      stop("Something went wrong.")}
+```
+
+Another useful function is `stop_for_status(response)` which converts http errors to R errors or warnings - these should always be used whenever you're creating requests inside a function, so that the user knows why a request has failed. If request was successful, the response (invisibly). Otherwise, raised a classed http error or warning, as generated by `http_condition()` . Other helpful functions are `warn_for_status()` and `message_for_status()`.
+
+### 4. Getting the API response
+
+One very useful function to use is content which **extract content from a request. For that** we use **`content()`** from the `httr` package to extract this content.
+
+```{r}
+#| output: false
+
+library(httr)
+# automatically parses JSON
+APIResult = content(response)
+#APIResult$seq
+```
+
+So here we sent an **API request** to the webserver, and it replied with the sequence(data).
+
+```{r}
+#| output: false
+# add code to extract content here
+json_text <- content(response, as="text")
+#json_text
+```
+
+Let's add an encoding.
+
+```{r}
+json_text <-content(response, as = "text", encoding = "UTF-8")
+#json_text
+```
+
+We can provide the `content_type` in the `GET()`.
+
+### 5. Converting the response into a dataframe
+
+Let's get all microarrays available for a given species. In R, we can parse this JSON string and convert it into a DataFrame using the `fromJSON()` from the `jsonlite` package. If the output of an endpoint contains a list, R will happily get all items in a list without the need for any loops.
+
+```{r}
+library(httr)
+library(jsonlite)
+library(xml2)
+library(tidyverse)
+ 
+baseURL <- "https://rest.ensembl.org"
+ext <- "/regulatory/species/homo_sapiens/microarray?"
+ 
+r <- GET(paste(baseURL, ext, sep = ""), content_type("application/json"))
+ 
+stop_for_status(r)
+class(content(r)) # list
+#fromJSON(content(r, "text", encoding = "UTF-8"))
+#content(r, "text", encoding = "UTF-8")
+```
+
+The `fromJSON` needs as an argument a JSON string, URL or file. To make it a JSON string we convert it to text.
+
+```{r}
+content(r, "text", encoding = "UTF-8")
+```
+
+To convert it to a dataframe we use the `fromJSON` function.
+
+```{r}
+fromJSON(content(r, "text", encoding = "UTF-8"))
+```
+
+Let´s convert it to a tibble
+
+```{r}
+as_tibble(fromJSON(content(r, "text", encoding = "UTF-8")))
+```
+
+### 6. Making a function
+
+Let´s make a function.
+
+```{r}
+library(httr)
+library(jsonlite)
+
+get_microarrays <- function(baseURL, ext, content_type){
+
+    r <- GET(paste(baseURL, ext, sep = ""), accept(content_type))
+
+    stop_for_status(r)
+
+    if (content_type == 'application/json'){
+        return (fromJSON(content(r, "text", encoding = "UTF-8")))
+    } else {
+        return (content(r, "text", encoding = "UTF-8"))
+    }
+}
+
+baseURL <- "https://rest.ensembl.org"
+ext <- "/regulatory/species/homo_sapiens/microarray?"
+con <- "application/json"
+
+
+get_microarrays(baseURL, ext, con)
+```
+
+Let's get the mouse homologue of the human BRCA2. If you specify another content type (not json), the helper function will get you this as text.
+
+```{r}
+gene <- "BRCA2"
+
+# define the URL parameters
+server <- "http://rest.ensembl.org/"
+con <- "application/json"
+request <- paste("homology/symbol/human/", gene, "?target_species=mouse", sep = "")
+r <- GET(paste(server, request, sep = ""), accept(con))
+stop_for_status(r)
+result = fromJSON(content(r, "text", encoding = "UTF-8"))
+result$data$id
+```
+
+Let's retrieve the Kegg database using the Kegg API.
+
+#### Kegg API using R
+
+```{r}
+library(httr)
+library(jsonlite)
+library(xml2)
+ 
+server <- "https://rest.kegg.jp"
+ext <- "/info/hsa"
+ 
+r <- GET(paste(server, ext, sep = ""), content_type("application/json"))
+ 
+content(r)
+```
+
+Let's have a look at the list of human pathways in Kegg.
+
+```{r, warning=FALSE}
+
+library(httr)
+library(jsonlite)
+library(xml2)
+library(tidyverse)
+
+server <- "https://rest.kegg.jp"
+ext <- "/list/pathway/hsa"
+ 
+r <- GET(paste(server, ext, sep = ""), content_type("application/json"))
+ 
+txt <- content(r, "text")
+df <- tibble(kegg_results = read_lines(txt))
+```
+
+```{r}
+df %>% separate(., col=kegg_results, into=c('Pathway_number', 'Pathway_name'), sep='\t')
+```
+
+Let's retrieve the amino acid sequence of a human gene in a `fasta` format.
+
+```{r}
+server <- "https://rest.kegg.jp"
+ext <- "/get/hsa:10458/aaseq"
+ 
+r <- GET(paste(server, ext, sep = ""), content_type("text/x-fasta"))
+
+print(content(r))
+```
+
+Let's try the `xml` content_type.
+
+```{r}
+server <- "https://rest.kegg.jp"
+ext <- "/get/hsa00600/kgml"
+ 
+r <- GET(paste(server, ext, sep = ""), content_type("text/xml"))
+
+content(r,encoding = "UTF-8")
+```
+
+### It´s YOUR TURN!!!!
+
+## References
+
+https://www.w3schools.com/js/js_json_intro.asp
+
+https://www.tutorialspoint.com/http/http_status_codes.htm
+
+https://medium.com/geekculture/a-beginners-guide-to-apis-9aa7b1b2e172
