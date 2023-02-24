@@ -7,7 +7,7 @@ Hedia Tnani
 ## Why should I learn about APIs?
 
 For the past 2 years, many groups have been working on creating APIs
-that the entire research community can leverage. There’s a a publication
+that the entire research community can leverage. There’s a publication
 [A Review on Genomics
 APIs](https://www.sciencedirect.com/science/article/pii/S2001037015000471#f0015)
 which shows some of the APIs used to retrieve data such as Google
